@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String?
+  username  String?  @unique
+  zipCode   String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  availabilityBlocks  Availability[]
+  createdEvents       Event[]
+  sentInvitations     Invitation[]   @relation("SentInvitations")
+  receivedInvitations Invitation[]   @relation("ReceivedInvitations")
+
+  friendshipsSent     Friendship[] @relation("FriendshipRequester")
+  friendshipsReceived Friendship[] @relation("FriendshipReceiver")
+}
+
+model Availability {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  startTime DateTime
+  endTime   DateTime
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startTime, endTime])
+}
+
+model Friendship {
+  id          String           @id @default(uuid()) @db.Uuid
+  requesterId String           @db.Uuid
+  receiverId  String           @db.Uuid
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId, status])
+}
+
+model Event {
+  id          String   @id @default(uuid()) @db.Uuid
+  creatorId   String   @db.Uuid
+  title       String
+  description String?
+  location    String?
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  invitations Invitation[]
+
+  @@index([creatorId])
+  @@index([startTime, endTime])
+}
+
+model Invitation {
+  id         String           @id @default(uuid()) @db.Uuid
+  eventId    String           @db.Uuid
+  senderId   String           @db.Uuid
+  receiverId String           @db.Uuid
+  status     InvitationStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sender   User  @relation("SentInvitations", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User  @relation("ReceivedInvitations", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, receiverId])
+  @@index([receiverId, status])
+}

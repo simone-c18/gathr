@@ -1,3 +1,6 @@
+// import { createClient } from '@/utils/supabase/server'
+// import { cookies } from 'next/headers'
+
 export default function HomePage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
